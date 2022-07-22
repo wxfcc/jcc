@@ -1,0 +1,227 @@
+/*
+java c complier
+author: WuXuefei
+*/
+package xf.jcc;
+
+
+public class jcc extends Base{
+	String srcPath;
+	int codeIndex;
+	byte[] code;
+
+    public static void main(String[] args) {
+    	String root = ".";
+    	String path = root + "/doc/test/t1.jc";
+    	path = root + "/src/xf/jcc/Jcc.jc";
+    	try {
+    		Jcc p = new Jcc(path);
+    		
+    		p.parse();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+    	
+    	pln("done");
+    }
+	
+    public Jcc2(String path) {
+    	srcPath = path;
+    }
+    
+    public boolean parse() {
+    	boolean ret = false;
+    	try {
+    		code = readFile(srcPath);
+			while(codeIndex < code.length) {
+				String v = nextWord();
+				if(v.length() > 0)
+				pln(v);
+			}
+			ret = true;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return ret;
+	}
+	
+	private String nextWord() {
+		StringBuilder sb = new StringBuilder();
+		
+		skipWhiteChar();
+		byte lc = 0;
+		while(codeIndex < code.length) {
+			byte c = code[codeIndex++];
+			if(isWhiteChar(c))
+				break;
+			if(c == '+') {
+				if(lc == '+') {
+					sb.append((char)c);
+					break;
+				}
+				if(sb.length() > 0) {codeIndex--;break;}
+			}
+			if(c == '-') {
+				if(lc == '-') {
+					sb.append((char)c);
+					break;
+				}
+				if(lc == '>') {	//lambda ?
+					sb.append((char)c);
+					break;
+				}				
+				if(sb.length() > 0) {codeIndex--;break;}
+			}
+			if(c == '*') {
+				if(lc == '/') {
+					sb.append((char)c);
+					readComment(sb);
+					break;
+				}				
+				if(sb.length() > 0) {codeIndex--;break;}
+			}
+			if(c == '/') {
+				if(lc == '/') {
+					sb.append((char)c);
+					readLineComment(sb);
+					break;
+				}
+				if(sb.length() > 0) {codeIndex--;break;}
+			}
+			if(c == '=') {	// == += -= *= /= >= <= %= ^= &= |=
+				byte q = '=';
+				if(lc == q|| lc == '+' || lc == '-' || lc == '*' || lc == '/' || lc == '>' || lc == '<' || lc == '%' || lc == '^' || lc == '&' || lc == '|') {
+					sb.append((char)c);
+					break;
+				}				
+				if(sb.length() > 0) {codeIndex--;break;}
+			}
+			if((c == '<' || c == '>') && c == lc) {
+				sb.append((char)c);
+				break;
+			}
+			if(c == '%' || c == '^' || c == '!' || c == '<' || c == '>') {
+				if(sb.length() > 0) {codeIndex--;break;}
+			}
+			if(c == '&') {
+				if(lc == '&') {
+					sb.append((char)c);
+					break;
+				}
+				if(sb.length() > 0) {codeIndex--;break;}
+			}
+			if(c == '|') {
+				if(lc == '|') {
+					sb.append((char)c);
+					break;
+				}				
+				if(sb.length() > 0) {codeIndex--;break;}
+			}
+			if(c == '"') {
+				if(lc == '='){codeIndex--;break;}
+				readString(sb);
+				break;
+			}
+			if(c == '\'')  {
+				if(lc == '='){codeIndex--;break;}
+				readEscapeChar(sb);
+				break;
+			}
+			if(c == ':') {
+				sb.append((char)c);
+				break;
+			}
+			if( lc == '{' || lc == '}' || lc == '(' || lc == ')' || lc == '[' || lc == ']' || lc == ';' || lc == '#'|| 
+					lc == '%' || lc == '^' || lc == '&' || lc == '|' ||   				// binary operand %= ^= &= |=
+					lc == '<' || lc == '>' || lc == '+' || lc == '-' ||	lc == '!' ||		// binary operand <= >= += -= !=
+					lc == '?' || lc == '=' ||
+					lc == '.' || lc == ',') {
+					codeIndex--;
+					break;
+			}
+			if( c == '{' || c == '}' || c == '(' || c == ')' || c == '[' || c == ']' || c == ';' || c == '#'|| 
+//				c == '%' || c == '^' || c == '&' || c == '|' ||   				// binary operand %= ^= &= |=
+//				c == '<' || c == '>' || c == '+' || c == '-' ||	c == '!' ||		// binary operand <= >= += -= !=
+				c == '?' ||										 				// ternary operand
+				c == '.' || c == ',') {
+				if(sb.length() > 0)
+					codeIndex--;
+				else
+					sb.append((char)c);
+				break;
+			}
+			sb.append((char)c);
+			lc = c;
+		}
+		
+		return sb.toString();
+	}
+	
+	private void readEscapeChar(StringBuilder sb) {
+		while(codeIndex < code.length) {
+			byte c = code[codeIndex++];
+			if(c == '\\') {
+				c = code[codeIndex++];
+				switch(c) {
+				case 't':sb.append('\t');break;
+				case 'r':sb.append('\r');break;
+				case 'n':sb.append('\n');break;
+				default:sb.append((char)c);break;
+				}
+				continue;
+			}
+			if(c == '\'') {
+				break;
+			}
+			sb.append((char)c);
+		}		
+	}
+
+	private void readComment(StringBuilder sb) {
+		while(codeIndex < code.length) {
+			byte c = code[codeIndex++];
+			if(c == '*') {
+				c = code[codeIndex++];
+				if(c == '/') {
+					sb.append("*/");
+					break;
+				}
+			}
+			sb.append((char)c);
+		}
+		
+	}
+
+	private void readString(StringBuilder sb) {
+		while(codeIndex < code.length) {
+			byte c = code[codeIndex++];
+			if(c == '"') {
+				break;
+			}
+			sb.append((char)c);
+		}
+	}
+
+	private void readLineComment(StringBuilder sb) {
+		while(codeIndex < code.length) {
+			byte c = code[codeIndex++];
+			if(c == '\r' || c == '\n') {
+				break;
+			}
+			sb.append((char)c);
+		}
+	}
+
+	private void skipWhiteChar() {
+		while(codeIndex < code.length&& isWhiteChar(code[codeIndex])) {
+			codeIndex++;
+		}
+	}
+	
+	private boolean isWhiteChar(byte c) {
+		if(c == ' ' || c == '\t' || c == '\r' || c == '\n')
+			return true;
+		return false;
+	}
+    
+}
