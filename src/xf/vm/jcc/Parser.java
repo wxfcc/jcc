@@ -9,7 +9,8 @@ import xf.vm.base.Base;
 public class Parser extends Base{
 	Jcc jcc;
 	String srcPath;
-	int codeIndex;
+	int codeIndex = 0, newLineIndex;
+	int lineNum = 1;
 	byte[] code;
 	
     public Parser(Jcc j, String path) {
@@ -26,9 +27,10 @@ public class Parser extends Base{
     			return false;
     		}
 			while(codeIndex < code.length) {
-				String v = nextWord();
-				if(v.length() > 0)
-				pln(v);
+				Word w = nextWord();
+				if(w != null) {
+					pln("line "+ w.lineNum+", " +(w.codeIndex - w.lineCodeIndex+1)+": "+ w.value);
+				}
 			}
 			ret = true;
 		} catch (Exception e) {
@@ -37,15 +39,21 @@ public class Parser extends Base{
 		return ret;
 	}
 
-	private String nextWord() {
+	private Word nextWord() {
+		Word w = new Word();
 		StringBuilder sb = new StringBuilder();
 		
 		skipWhiteChar();
 		if(codeIndex >= code.length) {
-			return sb.toString();
+			return null;// sb.toString();
 		}
+	
 		byte c = code[codeIndex];
 		boolean ispunct = ispunct(c);
+		w.codeIndex = codeIndex;
+		w.lineNum = lineNum;
+		w.lineCodeIndex=newLineIndex;
+		w.ispunct = ispunct;
 		if(ispunct) {
 			byte c2 = 0, c3 = 0;
 			if(codeIndex + 1 < code.length)c2 = code[codeIndex+1];
@@ -136,59 +144,60 @@ public class Parser extends Base{
 				else if(ispunct == ispunct(c))
 					sb.append((char)c);
 				else {
-					codeIndex --;
+					codeIndex--;
 					break;
 				}
 			}
 		}
-		return sb.toString();
+		w.value = sb.toString();
+		return w; //sb.toString();
 	}
 
-	private String nextWord0() {
-		StringBuilder sb = new StringBuilder();
-		
-		skipWhiteChar();
-		if(codeIndex >= code.length) {
-			return sb.toString();
-		}
-		byte lc = 0, c = code[codeIndex];
-		if(c == '"') {
-			codeIndex++;
-			//sb.append((char)c);
-			readString(sb);
-		}
-		else {
-			boolean ispunct = ispunct(c);
-			while(codeIndex < code.length ) {
-				c = code[codeIndex++];
-				if(isWhiteChar(c)) {
-					break;
-				}
-				else if(isCrlf(c)) {
-					break;
-				}
-				else if(ispunct == ispunct(c))
-					sb.append((char)c);
-				else {
-					codeIndex --;
-					break;
-				}
-			}
-			if(sb.length() >= 2) {
-				char c1 = sb.charAt(0), c2 = sb.charAt(1);
-				if('/' == c1) {
-					if('*' == c2) {
-						if(c != c1 && c != c2)
-							sb.append((char)c);
-						readComment(sb);
-					}
-					else if('/' == c2)
-						readLineComment(sb);
-				}
-			}
-		}
-		return sb.toString();
-	}
+//	private String nextWord0() {
+//		StringBuilder sb = new StringBuilder();
+//		
+//		skipWhiteChar();
+//		if(codeIndex >= code.length) {
+//			return sb.toString();
+//		}
+//		byte lc = 0, c = code[codeIndex];
+//		if(c == '"') {
+//			codeIndex++;
+//			//sb.append((char)c);
+//			readString(sb);
+//		}
+//		else {
+//			boolean ispunct = ispunct(c);
+//			while(codeIndex < code.length ) {
+//				c = code[codeIndex++];
+//				if(isWhiteChar(c)) {
+//					break;
+//				}
+//				else if(isCrlf(c)) {
+//					break;
+//				}
+//				else if(ispunct == ispunct(c))
+//					sb.append((char)c);
+//				else {
+//					codeIndex--;lineIndex--;
+//					break;
+//				}
+//			}
+//			if(sb.length() >= 2) {
+//				char c1 = sb.charAt(0), c2 = sb.charAt(1);
+//				if('/' == c1) {
+//					if('*' == c2) {
+//						if(c != c1 && c != c2)
+//							sb.append((char)c);
+//						readComment(sb);
+//					}
+//					else if('/' == c2)
+//						readLineComment(sb);
+//				}
+//			}
+//		}
+//		return sb.toString();
+//	}
 	
 	byte[] signChar = "`~!@%^&*()-=+[]{}\\|;:'\",<>/?".getBytes(); //#$.
 	private boolean ispunct(byte c) {
@@ -250,15 +259,45 @@ public class Parser extends Base{
 	private void readLineComment(StringBuilder sb) {
 		while(codeIndex < code.length) {
 			byte c = code[codeIndex++];
-			if(c == '\r' || c == '\n') {
+			if(c == '\n') {	//unix format
 				break;
+			}
+			else if(c == '\r') {
+				if(codeIndex < code.length) {
+					byte c2 = code[codeIndex];
+					if(c2 == '\n') {	//dos format, \r\n
+						codeIndex++;
+						break;
+					}
+				}
+				break;	//os2 format, \r
 			}
 			sb.append((char)c);
 		}
+		lineNum++;newLineIndex=codeIndex;
 	}
 
 	private void skipWhiteChar() {
-		while(codeIndex < code.length&& (isWhiteChar(code[codeIndex]) || isCrlf(code[codeIndex]))) {
+		while(codeIndex < code.length) {
+			byte c = code[codeIndex];
+			if(!isWhiteChar(c)) {
+				if(c == '\n') {
+					lineNum++;codeIndex++;newLineIndex=codeIndex;
+					continue;
+				}
+				else if(c == '\r') { //isCrlf(c)){
+					if(codeIndex+1 < code.length) {
+						byte c2 = code[codeIndex+1];
+						if(c2 == '\n') {	//dos format, \r\n
+							codeIndex++;	//skip \n
+						}
+						lineNum++;newLineIndex=codeIndex;
+					}
+					codeIndex++;
+					continue;
+				}
+				break;
+			}
 			codeIndex++;
 		}
 	}
