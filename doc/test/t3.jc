@@ -4,15 +4,9 @@ author: WuXuefei
 */
 package xf.jcc.test;
 
-import java.io.*;
-import java.lang.reflect.Field;
-import sun.nio.cs.StreamEncoder;
-
-import com.gd.base.TestBase;
-
-public class t1 extends TestBase{
+public class t3 extends Base{
     public static void main(String[] args) {
-    	String path = "../doc/pc/t1.java"; // src path
+    	String path = "../doc/pc/t1.jc"; // src path
     	int k=0;
     	k=k+1;
     	k++;

@@ -5,12 +5,8 @@ author: WuXuefei
 package xf.jcc.test;
 
 import java.io.*;
-import java.lang.reflect.Field;
-import sun.nio.cs.StreamEncoder;
 
-import com.gd.base.TestBase;
-
-public class t1 extends TestBase{
+public class t2 extends TesBase{
 	static void function(int a, int b, int c) {
 	    pln(String.format("%d %d %d", a, b, c));
 	}
