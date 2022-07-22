@@ -1,4 +1,4 @@
-package xf.jcc;
+package xf.vm.base;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;

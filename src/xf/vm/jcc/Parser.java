@@ -2,7 +2,9 @@
 java c complier
 author: WuXuefei
  */
-package xf.jcc;
+package xf.vm.jcc;
+
+import xf.vm.base.Base;
 
 public class Parser extends Base{
 	Jcc jcc;
