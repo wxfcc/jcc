@@ -41,5 +41,6 @@ int main() {
 	k^=2;
 	k&=2;
 	k<<=2;
+	printf("k=%d\n", k);
 	return k;
 }

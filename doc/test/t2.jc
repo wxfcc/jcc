@@ -5,8 +5,9 @@ author: WuXuefei
 package xf.jcc.test;
 
 import java.io.*;
+import xf.vm.jcc.Base;
 
-public class t2 extends TesBase{
+public abstract class t2 extends Base implements interface1,interface2{
 	static void function(int a, int b, int c) {
 	    pln(String.format("%d %d %d", a, b, c));
 	}
