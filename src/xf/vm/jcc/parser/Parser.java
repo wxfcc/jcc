@@ -16,7 +16,7 @@ public class Parser	extends	Base{
 	int	codeIndex =	0, newLineIndex;
 	int	lineNum	= 1;
 	byte[] code;
-	List<Word> words = new ArrayList<Word>();
+	List<Token> tokens = new ArrayList<Token>();
 	
 	public Parser(Jcc j, String	path) {
 		jcc	= j;
@@ -32,9 +32,9 @@ public class Parser	extends	Base{
 				return false;
 			}
 			while(codeIndex	< code.length) {
-				Word w = nextWord();
-				if(w !=	null) {
-					words.add(w);
+				Token t = nextWord();
+				if(t !=	null) {
+					tokens.add(t);
 				}
 			}
 			ret	= true;
@@ -44,8 +44,8 @@ public class Parser	extends	Base{
 		return ret;
 	}
 
-	private	Word nextWord()	{
-		Word w = new Word();
+	private	Token nextWord()	{
+		Token t = new Token();
 		StringBuilder sb = new StringBuilder();
 		
 		skipWhiteChar();
@@ -55,10 +55,10 @@ public class Parser	extends	Base{
 	
 		byte c = code[codeIndex];
 		boolean	ispunct	= ispunct(c) && !ishyphen(c);
-		w.codeIndex	= codeIndex;
-		w.lineNum =	lineNum;
-		w.lineCodeIndex=newLineIndex;
-		w.ispunct =	ispunct;
+		t.codeIndex	= codeIndex;
+		t.lineNum =	lineNum;
+		t.lineCodeIndex=newLineIndex;
+		t.ispunct =	ispunct;
 		if(ispunct)	{
 			byte c2	= 0, c3	= 0;
 			if(codeIndex + 1 < code.length)c2 =	code[codeIndex+1];
@@ -97,11 +97,11 @@ public class Parser	extends	Base{
 			case '/':
 				if('*' == c2) {
 					readComment(sb);
-					w.type = Word.Type.COMMENT;
+					t.type = Token.Type.COMMENT;
 				}
 				else if('/'	== c2) {
 					readLineComment(sb);
-					w.type = Word.Type.COMMENT;
+					t.type = Token.Type.COMMENT;
 				}
 				else if('='	== c2) {		// /=
 					codeIndex++;
@@ -161,8 +161,8 @@ public class Parser	extends	Base{
 				}
 			}
 		}
-		w.name	= sb.toString();
-		return w; //sb.toString();
+		t.name	= sb.toString();
+		return t; //sb.toString();
 	}
 
 	

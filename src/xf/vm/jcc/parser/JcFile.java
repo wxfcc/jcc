@@ -16,7 +16,7 @@ public class JcFile extends Base{
 	List<String>imports = new ArrayList<String>();
 	List<String>implement = new ArrayList<String>();
 
-	int expectStatus;		// expect package, class, extends(super), implements, class code begin, variable/method, "(){};:", while, case, break, #endif 
+	ExpectStatus expectStatus; 
 
 	public JcFile(Jcc j, String path) {
 		parser = new Parser(j, path);
@@ -30,9 +30,9 @@ public class JcFile extends Base{
 	}
 
 	int wIndex = 0;
-	List<Word> words;
+	List<Token> tokens;
 	public void run() {
-		words = parser.words;
+		tokens = parser.tokens;
 		readPackageName();
 		readImports();
 		readClassName();
@@ -40,17 +40,17 @@ public class JcFile extends Base{
 		for(String cn:imports)pln("import: "+cn);
 		pln(modifier + " class: "+className+", super: "+ superClassName);
 		for(String cn:implement)pln("implements: "+cn);
-		pln(words.get(wIndex).name);
+		pln(tokens.get(wIndex).name);
 		
-		while(wIndex < words.size()) {
-			Word w = words.get(wIndex);
-//			pln("line "+ w.lineNum+", "	+(w.codeIndex -	w.lineCodeIndex+1)+": "+ w.name);
+		while(wIndex < tokens.size()) {
+			Token t = tokens.get(wIndex);
+//			pln("line "+ t.lineNum+", "	+(t.codeIndex -	t.lineCodeIndex+1)+": "+ t.name);
 
-			if(w.ispunct) {
+			if(t.ispunct) {
 				
 			}
 			else {
-				switch(w.name) {
+				switch(t.name) {
 				case "import":
 				case "public":
 				case "private":
@@ -71,10 +71,10 @@ public class JcFile extends Base{
 	}
 	private void readImports() {
 		int n=0;
-		for(int i=wIndex;i<words.size();i++) {
-			Word w = words.get(i);
-			if(w.type != Word.Type.COMMENT) {
-				if("import".equals(w.name)) {
+		for(int i=wIndex;i<tokens.size();i++) {
+			Token t = tokens.get(i);
+			if(t.type != Token.Type.COMMENT) {
+				if("import".equals(t.name)) {
 					n=i;
 					break;
 				}
@@ -85,18 +85,18 @@ public class JcFile extends Base{
 			}
 		}
 		//import
-		for(int i=n;i<words.size();i++) {
-			Word w = words.get(i);
-			if("import".equals(w.name)) {
-				Word w2 = words.get(i+1);
-				Word w3 = words.get(i+2);
-				String cn = w2.name;
-				if("*".equals(w3.name)) {
-					cn += w3.name;
-					w3 = words.get(i+3);
+		for(int i=n;i<tokens.size();i++) {
+			Token t = tokens.get(i);
+			if("import".equals(t.name)) {
+				Token t2 = tokens.get(i+1);
+				Token t3 = tokens.get(i+2);
+				String cn = t2.name;
+				if("*".equals(t3.name)) {
+					cn += t3.name;
+					t3 = tokens.get(i+3);
 					i++;
 				}
-				if(";".equals(w3.name)) {
+				if(";".equals(t3.name)) {
 					imports.add(cn);
 					i += 2;
 				}
@@ -112,13 +112,13 @@ public class JcFile extends Base{
 		}		
 	}
 	private void readPackageName() {
-		for(int i=wIndex;i<words.size();i++) {
-			Word w = words.get(i);
-			if("package".equals(w.name)) {
-				Word w2 = words.get(i+1);
-				Word w3 = words.get(i+2);
-				if(";".equals(w3.name)) {
-					packageName = w2.name;
+		for(int i=wIndex;i<tokens.size();i++) {
+			Token t = tokens.get(i);
+			if("package".equals(t.name)) {
+				Token t2 = tokens.get(i+1);
+				Token t3 = tokens.get(i+2);
+				if(";".equals(t3.name)) {
+					packageName = t2.name;
 					wIndex = i + 3;
 				}
 				else {
@@ -133,50 +133,50 @@ public class JcFile extends Base{
 	}
 	private void readClassName() {
 		modifier = "";
-		for(int i=wIndex;i<words.size();i++) {
-			Word w = words.get(i);
-			if("class".equals(w.name) || "interface".equals(w.name)) {		//public class a extends b implements c,d,e {
+		for(int i=wIndex;i<tokens.size();i++) {
+			Token t = tokens.get(i);
+			if("class".equals(t.name) || "interface".equals(t.name)) {		//public class a extends b implements c,d,e {
 				int n = i+1;
-				Word w2 = words.get(n++);
-				Word w3 = words.get(n++);
-				if("extends".equals(w3.name)) {
-					Word w4 = words.get(i+3);
-					superClassName = w4.name;
+				Token t2 = tokens.get(n++);
+				Token t3 = tokens.get(n++);
+				if("extends".equals(t3.name)) {
+					Token t4 = tokens.get(i+3);
+					superClassName = t4.name;
 					n++;
 				}
-				Word w5 = words.get(n);
-				if("implements".equals(w5.name)) {
+				Token t5 = tokens.get(n);
+				if("implements".equals(t5.name)) {
 					n++;
-					while(n < words.size()) {
-						w5 = words.get(n);
-						if("{".equals(w5.name)) {	//class code begin
+					while(n < tokens.size()) {
+						t5 = tokens.get(n);
+						if("{".equals(t5.name)) {	//class code begin
 							break;
 						}
-						else if(",".equals(w5.name)) {
-							w5 = words.get(++n);
+						else if(",".equals(t5.name)) {
+							t5 = tokens.get(++n);
 						}
-						if(w5.ispunct) {
-							pln("error: "+w5.name);
+						if(t5.ispunct) {
+							pln("error: "+t5.name);
 							return;
 						}
-						implement.add(w5.name);
+						implement.add(t5.name);
 						n++;
 					}
 				}
 				
-				className = w2.name;
+				className = t2.name;
 				wIndex = n;
 				return;
 			}
-			else if("public".equals(w.name)) {
-				modifier = w.name;
-				pln(w.name);
+			else if("public".equals(t.name)) {
+				modifier = t.name;
+				pln(t.name);
 			}
-			else if("private".equals(w.name)) {
-				modifier = w.name;
-				pln(w.name);				
+			else if("private".equals(t.name)) {
+				modifier = t.name;
+				pln(t.name);				
 			}
-			else if("abstract".equals(w.name)) {
+			else if("abstract".equals(t.name)) {
 				abstractClass = true;
 			}
 			else {
@@ -198,4 +198,20 @@ public class JcFile extends Base{
 		return false;
 	}
 
+	enum ExpectStatus{
+		NONE,
+		PACKAGE_NAME, 
+		CLASS_NAME, 
+		SUPER_NAME, //extends(super), 
+		IMPLEMENTS_NAME, 
+		CLASS_CODE_BEGIN, 
+		VARIABLE_NAME,
+		METHOD__NAME, 
+		//"(){};:", 
+		WHILE, 
+		CASE, 
+		BREAK, 
+		MACRO_END	//#endf 
+		
+	}
 }

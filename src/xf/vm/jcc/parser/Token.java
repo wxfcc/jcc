@@ -1,6 +1,6 @@
 package xf.vm.jcc.parser;
 
-public class Word {
+public class Token {
 	//Parser parser;
 	Type type;			//variable, immediate number, operand, class, method, type(int, long, string), struct, enum, ;
 	int codeIndex;
