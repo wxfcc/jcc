@@ -25,6 +25,7 @@ public class Jcc extends Base{
 			JcFile jc = new JcFile(this, path);
 			
 			jc.parse();
+			jc.dumpTokens();
 			jc.run();
 		} catch	(Exception e) {
 			e.printStackTrace();

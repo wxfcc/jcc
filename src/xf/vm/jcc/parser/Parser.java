@@ -54,15 +54,16 @@ public class Parser	extends	Base{
 		}
 	
 		byte c = code[codeIndex];
+		byte c2	= 0, c3	= 0, c4 = 0;
 		boolean	ispunct	= ispunct(c) && !ishyphen(c);
 		t.codeIndex	= codeIndex;
 		t.lineNum =	lineNum;
 		t.lineCodeIndex=newLineIndex;
 		t.ispunct =	ispunct;
 		if(ispunct)	{
-			byte c2	= 0, c3	= 0;
 			if(codeIndex + 1 < code.length)c2 =	code[codeIndex+1];
 			if(codeIndex + 2 < code.length)c3 =	code[codeIndex+2];
+			if(codeIndex + 3 < code.length)c4 =	code[codeIndex+3];
 			codeIndex++;
 			sb.append((char)c);
 			switch(c) {
@@ -91,7 +92,6 @@ public class Parser	extends	Base{
 					sb.append((char)c2);					
 				}
 				break;
-//					case '@':
 			case '#':	//macro	##
 				break;
 			case '/':
@@ -141,20 +141,46 @@ public class Parser	extends	Base{
 					sb.append((char)c2);
 				}
 				break;
-			default:	//case '`',	'$', '@', '.', '\\'
+			case '.':	// ...
+				if(c ==	c2 && c == c3 && (')' == c4 || !ispunct(c4))){	// ...
+					codeIndex += 2;
+					sb.append((char)c2);
+					sb.append((char)c3);
+					break;
+				}
+				
+//				case '@':	//annotation
+			default:	//case '`',	'$',  '\\'
 			}
 		}
-		else {
+		if(!ispunct || '.' == c) {
 			while(codeIndex	< code.length )	{
 				c =	code[codeIndex++];
 				if(isWhiteChar(c)) {
-					break;
+					skipWhiteChar();
+					if('.' == c2) {	//last char
+						continue;
+					}
+					c2 = code[codeIndex++];
+					if('.' == c2) {
+						sb.append((char)c2);
+					}
+					else {
+						codeIndex--;
+						break;
+					}
 				}
 				else if(isCrlf(c)) {
+//					if('.' == c2) {
+//						lineNum ++;
+//						continue;
+//					}
 					break;
 				}
-				else if(ispunct	== ispunct(c) || ishyphen(c))
+				else if(ispunct	== ispunct(c) || ishyphen(c) || '.' == c) {
+					c2 = 0;	// reset 0
 					sb.append((char)c);
+				}
 				else {
 					codeIndex--;
 					break;
@@ -166,22 +192,6 @@ public class Parser	extends	Base{
 	}
 
 	
-	private	boolean	ispunct(byte c)	{
-		boolean	ret	= 
-				(c >= 0x21 && c	<= 0x2f	||	// !"#$%&'()*+,-./
-				 c >= 0x3a && c	<= 0x40	||	// :;<=?@
-				 c >= 0x5b && c	<= 0x60	||	// [\]^_`
-				 c >= 0x7b && c	<= 0x7e);	// {|}~
-
-		
-		return ret;
-	}
-	
-	private	boolean	ishyphen(byte c)	{
-		boolean ret =  (c ==	'.'	|| c ==	'_'	|| c ==	'$');
-		return ret;
-	}
-
 	private	void readEscapeChar(StringBuilder sb) {
 		while(codeIndex	< code.length) {
 			byte c = code[codeIndex++];
@@ -204,10 +214,23 @@ public class Parser	extends	Base{
 		while(codeIndex	< code.length) {
 			byte c = code[codeIndex++];
 			if(c ==	'*') {
-				c =	code[codeIndex++];
-				if(c ==	'/') {
+				byte c2 = code[codeIndex];
+				if(c2 == '/') {
+					codeIndex++;
 					sb.append("*/");
 					break;
+				}
+			}
+			else if(c == '\n') {
+				lineNum++;newLineIndex=codeIndex;
+			}
+			else if(c == '\r') { //isCrlf(c)){
+				if(codeIndex+1 < code.length) {
+					byte c2	= code[codeIndex+1];
+					if(c2 == '\n') {	//dos format, \r\n
+						codeIndex++;	//skip \n
+					}
+					lineNum++;newLineIndex=codeIndex;
 				}
 			}
 			sb.append((char)c);
@@ -271,16 +294,52 @@ public class Parser	extends	Base{
 		}
 	}
 	
-	private	boolean	isWhiteChar(byte c)	{
-		if(c ==	' '	|| c ==	'\t')
-			return true;
-		return false;
-	}
-	private	boolean	isCrlf(byte	c) {
-		if(c ==	'\r' ||	c == '\n')
-			return true;
-		return false;
+	public String readLine(Token t) {
+		String ret;
+		int n = t.codeIndex;
+		for(;n < code.length;n++) {
+			if(isCrlf(code[n]))break;
+		}
+		if(n >= code.length)n = code.length - 1;
+		int len = n - t.lineCodeIndex ;
+		ret = new String(code, t.lineCodeIndex, len);
+		return ret;
 	}
 
+	
+	private	boolean	isWhiteChar(byte c)	{
+		boolean	ret	= (c ==	' '	|| c ==	'\t');
+		return ret;
+	}
+	private	boolean	isCrlf(byte	c) {
+		boolean	ret	= (c ==	'\r' ||	c == '\n');
+		return ret;
+	}
+
+	private	boolean	ispunct(byte c)	{
+		boolean	ret	= 
+				(c >= 0x21 && c <= 0x2f	||	// !"#$%&'()*+,-./
+				 c >= 0x3a && c <= 0x40	||	// :;<=?@
+				 c >= 0x5b && c <= 0x60	||	// [\]^_`
+				 c >= 0x7b && c <= 0x7e);	// {|}~
+		return ret;
+	}
+	
+	private	boolean	ishyphen(byte c)	{
+		boolean ret =  (/*c == '.' ||*/ c == '_' || c == '$');
+		return ret;
+	}
+
+	private	boolean	isalpha(byte c)	{
+		boolean	ret	= 
+				(c >= 'a' && c <= 'z'	||	// a-z
+				 c >= 'A' && c <= 'Z'	);	// A-Z
+		return ret;
+	}
+
+	private	boolean	isnumber(byte c)	{
+		boolean	ret	= (c >= '0' && c <= '9');	// A-Z
+		return ret;
+	}
 	
 }
